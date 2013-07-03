@@ -45,21 +45,17 @@ bl_info = {
 import bpy
 from bpy.props import *
 
-def initSceneProperties(scn):
-    bpy.types.Scene.BWCInter = IntProperty(name="Interpolation",
-        description="Base Mesh subdivides (Higher interpolation -> Better matching weights)",
-        min=0,
-        max=10,
-        default=0)
-    bpy.types.Scene.BWCNamedBones = BoolProperty(name="Only Named Bones",
-        description="Copy only the bone related weight groups to Target (Skip all other weight groups)",
-        default=False)
-    bpy.types.Scene.BWCEmptyGroups = BoolProperty(name="Copy Empty Groups",
-        description="Create bone related weight groups in Target, even if they contain no vertices",
-        default=False)
-
-        
-initSceneProperties(bpy.context.scene)
+bpy.types.Scene.BWCInter = IntProperty(name="Interpolation",
+    description="Base Mesh subdivides (Higher interpolation -> Better matching weights)",
+    min=0,
+    max=10,
+    default=2)
+bpy.types.Scene.BWCNamedBones = BoolProperty(name="Only Named Bones",
+    description="Copy only the bone related weight groups to Target (Skip all other weight groups)",
+    default=False)
+bpy.types.Scene.BWCEmptyGroups = BoolProperty(name="Copy Empty Groups",
+    description="Create bone related weight groups in Target, even if they contain no vertices",
+    default=False)
 
 
 class BWCUi(bpy.types.Panel):
@@ -143,7 +139,7 @@ def main(context):
     for v in tempObj.data.vertices:
         v.co = baseObj.matrix_world * v.co
     for targetObject in targetObjects:
-        if (targetObject.type == 'MESH') & (targetObject!=context.active_object):
+        if (targetObject.type == 'MESH') & (targetObject != baseObj):
              boneWeightCopy(tempObj,targetObject, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups)
     bpy.ops.object.delete()
 

@@ -106,19 +106,20 @@ def boneWeightCopy(tempObj,targetObject, onlyNamedBones, keepEmptyGroups):
     
     WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
     for targetVert,WSTargetVertCo in zip(targetObject.data.vertices,WSTargetVertsCo):
-        dists = [(WSTargetVertCo-v.co).length for v in tempObj.data.vertices]
-        activeIndex = dists.index(min(dists))
-        nearestVertex = tempObj.data.vertices[activeIndex]
-        for group in nearestVertex.groups:
-            groupName = tempObj.vertex_groups[group.group].name
-            #print ("Group name is", groupName)
-            if ( onlyNamedBones == False or groupName in boneSet):
-                if not(groupName in targetObject.vertex_groups):
-                    targetObject.vertex_groups.new(groupName)
-                targetObject.vertex_groups[groupName].add([targetVert.index],group.weight,'REPLACE')
-                #print ("copied group", groupName)
-            #else:
-            #    print ("Skipping group", groupName)
+        if targetVert.select:
+            dists = [(WSTargetVertCo-v.co).length for v in tempObj.data.vertices]
+            activeIndex = dists.index(min(dists))
+            nearestVertex = tempObj.data.vertices[activeIndex]
+            for group in nearestVertex.groups:
+                groupName = tempObj.vertex_groups[group.group].name
+                #print ("Group name is", groupName)
+                if ( onlyNamedBones == False or groupName in boneSet):
+                    if not(groupName in targetObject.vertex_groups):
+                        targetObject.vertex_groups.new(groupName)
+                    targetObject.vertex_groups[groupName].add([targetVert.index],group.weight,'REPLACE')
+                    #print ("copied group", groupName)
+                #else:
+                #    print ("Skipping group", groupName)
 
 def main(context):
     '''Copies the bone weights'''

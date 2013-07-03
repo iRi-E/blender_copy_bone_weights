@@ -22,7 +22,7 @@
 # Modified by Gaia Clary, gaia.clary@machinimatrix.org :
 #
 # 31-aug-2011(GC): adapted to Blender-2.59 Python API
-# 02-Sep-2011(GC): Added checkmarks for 
+# 02-Sep-2011(GC): Added checkmarks for
 #              - copy only bone related weight groups
 #              - create weight groups on target even if they are empty
 # 18-Jan-2012(GC): adapted to Blender-2.62 Python API
@@ -73,7 +73,7 @@ class BWCUi(bpy.types.Panel):
             return type
         except:
             return False
-    
+
 
     def draw(self, context):
         layout = self.layout
@@ -83,7 +83,7 @@ class BWCUi(bpy.types.Panel):
         layout.prop(scn, 'BWCEmptyGroups')
         col = layout.column(align=False)
         col.operator("object.bwc",text="Copy Bone Weights")
-        
+
 
 
 def boneWeightCopy(tempObj,targetObject, onlyNamedBones, keepEmptyGroups):
@@ -103,7 +103,7 @@ def boneWeightCopy(tempObj,targetObject, onlyNamedBones, keepEmptyGroups):
                         targetObject.vertex_groups.new(bone.name)
 
     #get active object vertices and transform to world space
-    
+
     WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
     for targetVert,WSTargetVertCo in zip(targetObject.data.vertices,WSTargetVertsCo):
         if targetVert.select:
@@ -149,7 +149,7 @@ def main(context):
 class BWCOperator(bpy.types.Operator):
     ''''''
     bl_idname = "object.bwc"
-    bl_label = "Copy Selected Object Bone Weights to Active"    
+    bl_label = "Copy Selected Object Bone Weights to Active"
 
 
     def execute(self, context):

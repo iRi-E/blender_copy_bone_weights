@@ -35,10 +35,9 @@ from bpy.props import *
 class BWCUi(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
-
     bl_label = "Bone Weight Copy"
     bl_context = "objectmode"
-
+    bl_options = {"DEFAULT_CLOSED"}
 
     @classmethod
     def poll(cls, context):

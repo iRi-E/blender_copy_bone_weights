@@ -83,14 +83,21 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
             dists = [(WSTargetVertCo-v.co).length for v in tempObj.data.vertices]
             activeIndex = dists.index(min(dists))
             nearestVertex = tempObj.data.vertices[activeIndex]
-            for group in nearestVertex.groups:
-                groupName = tempObj.vertex_groups[group.group].name
+            for group in tempObj.vertex_groups:
+                groupName = group.name
                 #print ("Group name is", groupName)
                 if ( onlyNamedBones == False or groupName in boneSet):
-                    if not(groupName in targetObject.vertex_groups):
-                        targetObject.vertex_groups.new(groupName)
-                    targetObject.vertex_groups[groupName].add([targetVert.index], group.weight, 'REPLACE')
-                    #print ("copied group", groupName)
+                    try:
+                        weight = group.weight(activeIndex)
+                    except RuntimeError: # nearest vertex is not included in this group
+                        if groupName in targetObject.vertex_groups:
+                            targetObject.vertex_groups[groupName].remove([targetVert.index])
+                            #print ("removed group", groupName)
+                    else:
+                        if not(groupName in targetObject.vertex_groups):
+                            targetObject.vertex_groups.new(groupName)
+                        targetObject.vertex_groups[groupName].add([targetVert.index], weight, 'REPLACE')
+                        #print ("copied group", groupName)
                 #else:
                 #    print ("Skipping group", groupName)
 

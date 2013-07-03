@@ -1,7 +1,4 @@
-# AlingTools.py (c) 2009, 2010 Gabriel Beaudin (gabhead)
-#
 # ***** BEGIN GPL LICENSE BLOCK *****
-#
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -30,7 +27,6 @@ bl_info = {
     "tracker_url": "https://github.com/iRi-E/blender_copy_bone_weights/issues",
     "category": "3D View"}
 
-"""Copy Bone Weights to Selected Objects"""
 
 import bpy
 from bpy.props import *

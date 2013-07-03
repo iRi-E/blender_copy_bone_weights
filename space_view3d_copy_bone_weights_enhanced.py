@@ -21,13 +21,13 @@
 
 bl_info = {
     "name": "Copy Bone Weights",
-    "author": "Luke Hares, Gaia Clary",
+    "author": "Luke Hares, Gaia Clary, IRIE Shinsuke",
     "version": (0, 1),
     "blender": (2, 6, 3),
     "api": 45996,
     "location": "View3D > Tool Shelf > Copy Bone Weights Panel",
     "description": "Copy Bone Weights from Active Object to Selected Objects",
-    "warning": "",
+    "tracker_url": "https://github.com/iRi-E/blender_copy_bone_weights/issues",
     "category": "3D View"}
 
 """Copy Bone Weights to Selected Objects"""

@@ -72,7 +72,7 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                 #print ("bone ", bone.name)
                 boneSet.append(bone.name)
                 if keepEmptyGroups == True:
-                    if not(bone.name in targetObject.vertex_groups):
+                    if bone.use_deform and not(bone.name in targetObject.vertex_groups):
                         targetObject.vertex_groups.new(bone.name)
 
     #get active object vertices and transform to world space

@@ -18,21 +18,11 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ***** END GPL LICENCE BLOCK *****
-#
-# Modified by Gaia Clary, gaia.clary@machinimatrix.org :
-#
-# 31-aug-2011(GC): adapted to Blender-2.59 Python API
-# 02-Sep-2011(GC): Added checkmarks for
-#              - copy only bone related weight groups
-#              - create weight groups on target even if they are empty
-# 18-Jan-2012(GC): adapted to Blender-2.62 Python API
-
-
 
 bl_info = {
     "name": "Copy Bone Weights",
     "author": "Luke Hares, Gaia Clary",
-    "version": (0,1),
+    "version": (0, 1),
     "blender": (2, 6, 3),
     "api": 45996,
     "location": "View3D > Tool Shelf > Copy Bone Weights Panel",
@@ -82,11 +72,11 @@ class BWCUi(bpy.types.Panel):
         layout.prop(scn, 'BWCNamedBones')
         layout.prop(scn, 'BWCEmptyGroups')
         col = layout.column(align=False)
-        col.operator("object.bwc",text="Copy Bone Weights")
+        col.operator("object.bwc", text="Copy Bone Weights")
 
 
 
-def boneWeightCopy(tempObj,targetObject, onlyNamedBones, keepEmptyGroups):
+def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
     print("Weight group Copy to ", targetObject.name)
     modifiers = tempObj.modifiers
     boneSet = []
@@ -105,7 +95,7 @@ def boneWeightCopy(tempObj,targetObject, onlyNamedBones, keepEmptyGroups):
     #get active object vertices and transform to world space
 
     WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
-    for targetVert,WSTargetVertCo in zip(targetObject.data.vertices,WSTargetVertsCo):
+    for targetVert, WSTargetVertCo in zip(targetObject.data.vertices, WSTargetVertsCo):
         if targetVert.select:
             dists = [(WSTargetVertCo-v.co).length for v in tempObj.data.vertices]
             activeIndex = dists.index(min(dists))
@@ -116,7 +106,7 @@ def boneWeightCopy(tempObj,targetObject, onlyNamedBones, keepEmptyGroups):
                 if ( onlyNamedBones == False or groupName in boneSet):
                     if not(groupName in targetObject.vertex_groups):
                         targetObject.vertex_groups.new(groupName)
-                    targetObject.vertex_groups[groupName].add([targetVert.index],group.weight,'REPLACE')
+                    targetObject.vertex_groups[groupName].add([targetVert.index], group.weight, 'REPLACE')
                     #print ("copied group", groupName)
                 #else:
                 #    print ("Skipping group", groupName)
@@ -142,7 +132,7 @@ def main(context):
         v.co = baseObj.matrix_world * v.co
     for targetObject in targetObjects:
         if (targetObject.type == 'MESH') & (targetObject != baseObj):
-             boneWeightCopy(tempObj,targetObject, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups)
+             boneWeightCopy(tempObj, targetObject, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups)
     bpy.ops.object.delete()
 
 ## Copy Bone Weights Operator

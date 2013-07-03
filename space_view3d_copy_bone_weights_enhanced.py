@@ -35,18 +35,6 @@ bl_info = {
 import bpy
 from bpy.props import *
 
-bpy.types.Scene.BWCInter = IntProperty(name="Interpolation",
-    description="Base Mesh subdivides (Higher interpolation -> Better matching weights)",
-    min=0,
-    max=10,
-    default=2)
-bpy.types.Scene.BWCNamedBones = BoolProperty(name="Only Named Bones",
-    description="Copy only the bone related weight groups to Target (Skip all other weight groups)",
-    default=False)
-bpy.types.Scene.BWCEmptyGroups = BoolProperty(name="Copy Empty Groups",
-    description="Create bone related weight groups in Target, even if they contain no vertices",
-    default=False)
-
 
 class BWCUi(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
@@ -137,7 +125,7 @@ def main(context):
 
 ## Copy Bone Weights Operator
 class BWCOperator(bpy.types.Operator):
-    ''''''
+    '''Copy Bone Weights to Selected Objects'''
     bl_idname = "object.bwc"
     bl_label = "Copy Selected Object Bone Weights to Active"
 
@@ -152,12 +140,24 @@ class BWCOperator(bpy.types.Operator):
 def register():
     bpy.utils.register_module(__name__)
 
-    pass
+    bpy.types.Scene.BWCInter = IntProperty(name="Interpolation",
+        description="Base Mesh subdivides (Higher interpolation -> Better matching weights)",
+        min=0,
+        max=10,
+        default=2)
+    bpy.types.Scene.BWCNamedBones = BoolProperty(name="Only Named Bones",
+        description="Copy only the bone related weight groups to Target (Skip all other weight groups)",
+        default=False)
+    bpy.types.Scene.BWCEmptyGroups = BoolProperty(name="Copy Empty Groups",
+        description="Create bone related weight groups in Target, even if they contain no vertices",
+        default=False)
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    del bpy.types.Scene.BWCInter
+    del bpy.types.Scene.BWCNamedBones
+    del bpy.types.Scene.BWCEmptyGroups
 
-    pass
+    bpy.utils.unregister_module(__name__)
 
 if __name__ == "__main__":
     register()

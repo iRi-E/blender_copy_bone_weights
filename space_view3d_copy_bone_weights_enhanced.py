@@ -33,8 +33,8 @@ bl_info = {
     "name": "Copy Bone Weights",
     "author": "Luke Hares, Gaia Clary",
     "version": (0,1),
-    "blender": (2, 5, 9),
-    "api": 35853,
+    "blender": (2, 6, 3),
+    "api": 45996,
     "location": "View3D > Tool Shelf > Copy Bone Weights Panel",
     "description": "Copy Bone Weights from Active Object to Selected Objects",
     "warning": "",
@@ -134,6 +134,7 @@ def main(context):
     if context.scene.BWCInter > 0:
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.quads_convert_to_tris(use_beauty=True)
         bpy.ops.mesh.subdivide(number_cuts=context.scene.BWCInter, smoothness=0)
         bpy.ops.object.editmode_toggle()
     for v in tempObj.data.vertices:

@@ -115,7 +115,10 @@ def main(context):
     if context.scene.BWCInter > 0:
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.quads_convert_to_tris(use_beauty=True)
+        try: # before a7b44c82e5b9
+            bpy.ops.mesh.quads_convert_to_tris(use_beauty=True)
+        except TypeError:
+            bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
         bpy.ops.mesh.subdivide(number_cuts=context.scene.BWCInter, smoothness=0)
         bpy.ops.object.editmode_toggle()
     for v in tempObj.data.vertices:

@@ -79,11 +79,13 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
     #get active object vertices and transform to world space
 
     WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
+    ncopied = 0
     for targetVert, WSTargetVertCo in zip(targetObject.data.vertices, WSTargetVertsCo):
         if targetVert.select:
             dists = [(WSTargetVertCo-v.co).length for v in tempObj.data.vertices]
             activeIndex = dists.index(min(dists))
             nearestVertex = tempObj.data.vertices[activeIndex]
+            copied = False
             for group in tempObj.vertex_groups:
                 groupName = group.name
                 #print ("Group name is", groupName)
@@ -98,9 +100,13 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                         if not(groupName in targetObject.vertex_groups):
                             targetObject.vertex_groups.new(groupName)
                         targetObject.vertex_groups[groupName].add([targetVert.index], weight, 'REPLACE')
+                        copied = True
                         #print ("copied group", groupName)
                 #else:
                 #    print ("Skipping group", groupName)
+            if copied:
+                ncopied += 1
+    print("copied bone weights of %d vertices" % ncopied)
 
 def main(context):
     '''Copies the bone weights'''
@@ -131,7 +137,7 @@ def main(context):
 
 ## Copy Bone Weights Operator
 class BWCOperator(bpy.types.Operator):
-    '''Copy Bone Weights to Selected Objects'''
+    '''Copy Bone Weights form Active Object to Selected Vertices in Selected Objects'''
     bl_idname = "object.bwc"
     bl_label = "Copy Selected Object Bone Weights to Active"
 

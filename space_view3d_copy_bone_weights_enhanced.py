@@ -125,6 +125,11 @@ def main(context):
     baseObj.select=True
     bpy.ops.object.duplicate()
     tempObj = context.active_object
+    #apply mirrors, to process target objects not mirrored
+    for modifier in tempObj.modifiers:
+        if modifier.type == 'MIRROR':
+            bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modifier.name)
+    #subdevide to interpolate the weight values
     if context.scene.BWCInter > 0:
         bpy.ops.object.editmode_toggle()
         bpy.ops.mesh.select_all(action='SELECT')

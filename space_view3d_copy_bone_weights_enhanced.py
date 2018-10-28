@@ -30,6 +30,7 @@ bl_info = {
 
 import bpy
 from bpy.props import *
+import mathutils
 
 
 class BWCUi(bpy.types.Panel):
@@ -76,15 +77,20 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                     if bone.use_deform and not(bone.name in targetObject.vertex_groups):
                         targetObject.vertex_groups.new(bone.name)
 
-    #get active object vertices and transform to world space
+    #build kd-tree
+    size = len(tempObj.data.vertices)
+    kd = mathutils.kdtree.KDTree(size)
+    for i, v in enumerate(tempObj.data.vertices):
+        kd.insert(v.co, i)
+    kd.balance()
 
+    #get active object vertices and transform to world space
     WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
+
     ncopied = 0
     for targetVert, WSTargetVertCo in zip(targetObject.data.vertices, WSTargetVertsCo):
         if targetVert.select:
-            dists = [(WSTargetVertCo-v.co).length for v in tempObj.data.vertices]
-            activeIndex = dists.index(min(dists))
-            nearestVertex = tempObj.data.vertices[activeIndex]
+            nearestCo, activeIndex, minDist = kd.find(WSTargetVertCo)
             copied = False
             for group in tempObj.vertex_groups:
                 groupName = group.name

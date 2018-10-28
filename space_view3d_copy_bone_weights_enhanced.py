@@ -146,7 +146,7 @@ class BWCOperator(bpy.types.Operator):
     '''Copy Bone Weights form Active Object to Selected Vertices in Selected Objects'''
     bl_idname = "object.bwc"
     bl_label = "Copy Selected Object Bone Weights to Active"
-
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         main(context)

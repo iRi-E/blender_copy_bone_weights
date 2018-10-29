@@ -20,8 +20,7 @@ bl_info = {
     "name": "Copy Bone Weights",
     "author": "Luke Hares, Gaia Clary, IRIE Shinsuke",
     "version": (0, 1),
-    "blender": (2, 6, 3),
-    "api": 45996,
+    "blender": (2, 77, 0),
     "location": "View3D > Tool Shelf > Copy Bone Weights Panel",
     "description": "Copy Bone Weights from Active Object to Selected Objects",
     "tracker_url": "https://github.com/iRi-E/blender_copy_bone_weights/issues",
@@ -77,37 +76,69 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                     if bone.use_deform and not(bone.name in targetObject.vertex_groups):
                         targetObject.vertex_groups.new(bone.name)
 
-    #build kd-tree
-    size = len(tempObj.data.vertices)
-    kd = mathutils.kdtree.KDTree(size)
-    for i, v in enumerate(tempObj.data.vertices):
-        kd.insert(v.co, i)
-    kd.balance()
-
     #get active object vertices and transform to world space
     WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
 
+    mesh = tempObj.data
+    polygons = mesh.polygons
+    vertices = mesh.vertices
+
+    weights = [0.0, 0.0, 0.0]
+    unitTri = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 0.0))
+    kd = None
     ncopied = 0
+
     for targetVert, WSTargetVertCo in zip(targetObject.data.vertices, WSTargetVertsCo):
         if targetVert.select:
-            nearestCo, activeIndex, minDist = kd.find(WSTargetVertCo)
+            try:
+                faceFound, nearestCo, normal, faceIndex = tempObj.closest_point_on_mesh(WSTargetVertCo)
+            except RuntimeError: # there is no polygon
+                faceFound = False
+
+            if faceFound:
+                triangle = polygons[faceIndex].vertices
+                triCo = [vertices[i].co for i in triangle]
+            else:
+                # fallback
+                if not kd:
+                    print("falling back to nearest vertex method...")
+                    # build kd-tree
+                    size = len(mesh.vertices)
+                    kd = mathutils.kdtree.KDTree(size)
+                    for i, v in enumerate(mesh.vertices):
+                        kd.insert(v.co, i)
+                    kd.balance()
+                nearestCo, activeIndex, minDist = kd.find(WSTargetVertCo)
+
             copied = False
             for group in tempObj.vertex_groups:
                 groupName = group.name
                 #print ("Group name is", groupName)
-                if ( onlyNamedBones == False or groupName in boneSet):
-                    try:
-                        weight = group.weight(activeIndex)
-                    except RuntimeError: # nearest vertex is not included in this group
-                        if groupName in targetObject.vertex_groups:
-                            targetObject.vertex_groups[groupName].remove([targetVert.index])
-                            #print ("removed group", groupName)
+                if (groupName in boneSet or onlyNamedBones == False):
+                    if faceFound:
+                        for i, vertex in enumerate(triangle):
+                            try:
+                                weights[i] = group.weight(vertex)
+                            except RuntimeError: # nearest vertex is not included in this group
+                                weights[i] = 0.0
+                        co = mathutils.geometry.barycentric_transform(nearestCo, triCo[0], triCo[1], triCo[2],
+                                                                      unitTri[0], unitTri[1], unitTri[2])
+                        weight = co[0] * weights[0] + co[1] * weights[1] + (1.0 - co[0] - co[1]) * weights[2]
                     else:
+                        try:
+                            weight = group.weight(activeIndex)
+                        except RuntimeError: # nearest vertex is not included in this group
+                            weight = 0.0
+
+                    if weight:
                         if not(groupName in targetObject.vertex_groups):
                             targetObject.vertex_groups.new(groupName)
                         targetObject.vertex_groups[groupName].add([targetVert.index], weight, 'REPLACE')
                         copied = True
                         #print ("copied group", groupName)
+                    elif groupName in targetObject.vertex_groups:
+                        targetObject.vertex_groups[groupName].remove([targetVert.index])
+                        #print ("removed group", groupName)
                 #else:
                 #    print ("Skipping group", groupName)
             if copied:
@@ -129,16 +160,13 @@ def main(context):
     for modifier in tempObj.modifiers:
         if modifier.type == 'MIRROR':
             bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modifier.name)
-    #subdevide to interpolate the weight values
+    # subdevide and triangulate polygons to interpolate the weight values
+    bpy.ops.object.editmode_toggle()
+    bpy.ops.mesh.select_all(action='SELECT')
     if context.scene.BWCInter > 0:
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.mesh.select_all(action='SELECT')
-        try: # before a7b44c82e5b9
-            bpy.ops.mesh.quads_convert_to_tris(use_beauty=True)
-        except TypeError:
-            bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
         bpy.ops.mesh.subdivide(number_cuts=context.scene.BWCInter, smoothness=0)
-        bpy.ops.object.editmode_toggle()
+    bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
+    bpy.ops.object.editmode_toggle()
     for v in tempObj.data.vertices:
         v.co = baseObj.matrix_world * v.co
     for targetObject in targetObjects:

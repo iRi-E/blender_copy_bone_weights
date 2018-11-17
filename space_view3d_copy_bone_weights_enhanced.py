@@ -159,6 +159,7 @@ def main(context):
     #apply mirrors, to process target objects not mirrored
     for modifier in tempObj.modifiers:
         if modifier.type == 'MIRROR':
+            bpy.ops.object.shape_key_remove(all=True)
             bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modifier.name)
     # subdevide and triangulate polygons to interpolate the weight values
     bpy.ops.object.editmode_toggle()

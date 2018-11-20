@@ -51,6 +51,7 @@ class BWCUi(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scn = context.scene
+
         layout.prop(scn, 'BWCNamedBones')
         layout.prop(scn, 'BWCEmptyGroups')
         col = layout.column(align=False)
@@ -68,9 +69,11 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
         if type == 'ARMATURE':
             armature = modifier.object.data
             bones = armature.bones
+
             for bone in bones:
                 # print ("bone ", bone.name)
                 boneSet.append(bone.name)
+
                 if keepEmptyGroups:
                     if bone.use_deform and bone.name not in targetObject.vertex_groups:
                         targetObject.vertex_groups.new(bone.name)
@@ -98,8 +101,10 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                     # build kd-tree
                     size = len(mesh.vertices)
                     kd = mathutils.kdtree.KDTree(size)
+
                     for i, v in enumerate(mesh.vertices):
                         kd.insert(v.co, i)
+
                     kd.balance()
                 nearestCo, activeIndex, minDist = kd.find(WSTargetVertCo)
 
@@ -107,9 +112,11 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
             for group in tempObj.vertex_groups:
                 groupName = group.name
                 # print ("Group name is", groupName)
+
                 if (groupName in boneSet or not onlyNamedBones):
                     if faceFound:
                         weight = 0.0
+
                         for i, w in zip(polygon, ipWeights):
                             try:
                                 weight += group.weight(i) * w
@@ -124,6 +131,7 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                     if weight:
                         if groupName not in targetObject.vertex_groups:
                             targetObject.vertex_groups.new(groupName)
+
                         targetObject.vertex_groups[groupName].add([targetVert.index], weight, 'REPLACE')
                         copied = True
                         # print ("copied group", groupName)
@@ -139,31 +147,40 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
 
 def main(context):
     '''Copies the bone weights'''
+
     # print(context.scene.BWCNamedBones, context.scene.BWCEmptyGroups )
     if context.active_object.type != 'MESH':
         return
+
     targetObjects = context.selected_objects
     baseObj = context.active_object
+
     bpy.ops.object.select_all(action='DESELECT')
     baseObj.select = True
+
     bpy.ops.object.duplicate()
     tempObj = context.active_object
+
     # apply mirrors, to process target objects not mirrored
     for modifier in tempObj.modifiers:
         if modifier.type == 'MIRROR':
             bpy.ops.object.shape_key_remove(all=True)
             bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modifier.name)
+
     for v in tempObj.data.vertices:
         v.co = baseObj.matrix_world * v.co
+
     for targetObject in targetObjects:
         if (targetObject.type == 'MESH') & (targetObject != baseObj):
             boneWeightCopy(tempObj, targetObject, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups)
+
     bpy.ops.object.delete()
 
 
 # Copy Bone Weights Operator
 class BWCOperator(bpy.types.Operator):
     '''Copy bone weights from active object to selected vertices in other selected objects'''
+
     bl_idname = "object.bwc"
     bl_label = "Copy Bone Weights Active Object to Selected Objects"
     bl_options = {'REGISTER', 'UNDO'}

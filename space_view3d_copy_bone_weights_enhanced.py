@@ -20,7 +20,7 @@ bl_info = {
     "name": "Copy Bone Weights",
     "author": "Luke Hares, Gaia Clary, IRIE Shinsuke",
     "version": (0, 1),
-    "blender": (2, 77, 0),
+    "blender": (2, 78, 0),
     "location": "View3D > Tool Shelf > Copy Bone Weights Panel",
     "description": "Copy Bone Weights from Active Object to Selected Objects",
     "tracker_url": "https://github.com/iRi-E/blender_copy_bone_weights/issues",
@@ -52,7 +52,6 @@ class BWCUi(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scn = context.scene
-        layout.prop(scn, 'BWCInter')
         layout.prop(scn, 'BWCNamedBones')
         layout.prop(scn, 'BWCEmptyGroups')
         col = layout.column(align=False)
@@ -63,6 +62,8 @@ class BWCUi(bpy.types.Panel):
 def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
     print("Weight group Copy to ", targetObject.name)
     modifiers = tempObj.modifiers
+    mesh = tempObj.data
+
     boneSet = []
     for modifier in modifiers:
         type = modifier.type
@@ -79,12 +80,6 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
     #get active object vertices and transform to world space
     WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
 
-    mesh = tempObj.data
-    polygons = mesh.polygons
-    vertices = mesh.vertices
-
-    weights = [0.0, 0.0, 0.0]
-    unitTri = ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 0.0))
     kd = None
     ncopied = 0
 
@@ -96,8 +91,8 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                 faceFound = False
 
             if faceFound:
-                triangle = polygons[faceIndex].vertices
-                triCo = [vertices[i].co for i in triangle]
+                polygon = mesh.polygons[faceIndex].vertices
+                ipWeights = mathutils.interpolate.poly_3d_calc([mesh.vertices[i].co for i in polygon], nearestCo)
             else:
                 # fallback
                 if not kd:
@@ -116,18 +111,16 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                 #print ("Group name is", groupName)
                 if (groupName in boneSet or onlyNamedBones == False):
                     if faceFound:
-                        for i, vertex in enumerate(triangle):
+                        weight = 0.0
+                        for i, w in zip(polygon, ipWeights):
                             try:
-                                weights[i] = group.weight(vertex)
-                            except RuntimeError: # nearest vertex is not included in this group
-                                weights[i] = 0.0
-                        co = mathutils.geometry.barycentric_transform(nearestCo, triCo[0], triCo[1], triCo[2],
-                                                                      unitTri[0], unitTri[1], unitTri[2])
-                        weight = co[0] * weights[0] + co[1] * weights[1] + (1.0 - co[0] - co[1]) * weights[2]
+                                weight += group.weight(i) * w
+                            except RuntimeError: # vertex doesn't belong to this group
+                                pass
                     else:
                         try:
                             weight = group.weight(activeIndex)
-                        except RuntimeError: # nearest vertex is not included in this group
+                        except RuntimeError: # nearest vertex doesn't belong to this group
                             weight = 0.0
 
                     if weight:
@@ -147,7 +140,7 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
 
 def main(context):
     '''Copies the bone weights'''
-    #print(context.scene.BWCInter, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups )
+    #print(context.scene.BWCNamedBones, context.scene.BWCEmptyGroups )
     if context.active_object.type != 'MESH':
         return
     targetObjects = context.selected_objects
@@ -161,13 +154,6 @@ def main(context):
         if modifier.type == 'MIRROR':
             bpy.ops.object.shape_key_remove(all=True)
             bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modifier.name)
-    # subdevide and triangulate polygons to interpolate the weight values
-    bpy.ops.object.editmode_toggle()
-    bpy.ops.mesh.select_all(action='SELECT')
-    if context.scene.BWCInter > 0:
-        bpy.ops.mesh.subdivide(number_cuts=context.scene.BWCInter, smoothness=0)
-    bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
-    bpy.ops.object.editmode_toggle()
     for v in tempObj.data.vertices:
         v.co = baseObj.matrix_world * v.co
     for targetObject in targetObjects:
@@ -192,11 +178,6 @@ class BWCOperator(bpy.types.Operator):
 def register():
     bpy.utils.register_module(__name__)
 
-    bpy.types.Scene.BWCInter = IntProperty(name="Interpolation",
-        description="Base Mesh subdivides (Higher interpolation -> Better matching weights)",
-        min=0,
-        max=10,
-        default=2)
     bpy.types.Scene.BWCNamedBones = BoolProperty(name="Only Named Bones",
         description="Copy only the bone related weight groups to Target (Skip all other weight groups)",
         default=False)
@@ -205,7 +186,6 @@ def register():
         default=False)
 
 def unregister():
-    del bpy.types.Scene.BWCInter
     del bpy.types.Scene.BWCNamedBones
     del bpy.types.Scene.BWCEmptyGroups
 

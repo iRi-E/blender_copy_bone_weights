@@ -43,8 +43,7 @@ class BWCUi(bpy.types.Panel):
     @classmethod
     def poll(cls, context):
         try:
-            type = context.active_object.type == "MESH"
-            return type
+            return context.active_object.type == "MESH"
         except AttributeError:
             return False
 
@@ -52,26 +51,23 @@ class BWCUi(bpy.types.Panel):
         layout = self.layout
         scn = context.scene
 
-        layout.prop(scn, 'BWCNamedBones')
-        layout.prop(scn, 'BWCEmptyGroups')
         col = layout.column(align=False)
+        col.prop(scn, 'BWCNamedBones')
+        col.prop(scn, 'BWCEmptyGroups')
         col.operator("object.bwc", text="Copy Bone Weights")
 
 
 def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
-    print("Weight group Copy to ", targetObject.name)
     modifiers = tempObj.modifiers
     mesh = tempObj.data
 
     boneSet = []
     for modifier in modifiers:
-        type = modifier.type
-        if type == 'ARMATURE':
+        if modifier.type == 'ARMATURE':
             armature = modifier.object.data
             bones = armature.bones
 
             for bone in bones:
-                # print ("bone ", bone.name)
                 boneSet.append(bone.name)
 
                 if keepEmptyGroups:
@@ -98,20 +94,19 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                 # fallback
                 if not kd:
                     print("falling back to nearest vertex method...")
+
                     # build kd-tree
                     size = len(mesh.vertices)
                     kd = mathutils.kdtree.KDTree(size)
-
                     for i, v in enumerate(mesh.vertices):
                         kd.insert(v.co, i)
-
                     kd.balance()
+
                 nearestCo, activeIndex, minDist = kd.find(WSTargetVertCo)
 
             copied = False
             for group in tempObj.vertex_groups:
                 groupName = group.name
-                # print ("Group name is", groupName)
 
                 if (groupName in boneSet or not onlyNamedBones):
                     if faceFound:
@@ -134,21 +129,18 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
 
                         targetObject.vertex_groups[groupName].add([targetVert.index], weight, 'REPLACE')
                         copied = True
-                        # print ("copied group", groupName)
                     elif groupName in targetObject.vertex_groups:
                         targetObject.vertex_groups[groupName].remove([targetVert.index])
-                        # print ("removed group", groupName)
-                # else:
-                #     print ("Skipping group", groupName)
+
             if copied:
                 ncopied += 1
-    print("copied bone weights of %d vertices" % ncopied)
+
+    return ncopied
 
 
 def main(context):
     '''Copies the bone weights'''
 
-    # print(context.scene.BWCNamedBones, context.scene.BWCEmptyGroups )
     if context.active_object.type != 'MESH':
         return
 
@@ -172,7 +164,9 @@ def main(context):
 
     for targetObject in targetObjects:
         if (targetObject.type == 'MESH') & (targetObject != baseObj):
-            boneWeightCopy(tempObj, targetObject, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups)
+            print("Copy bone weights from '{}' to '{}'".format(baseObj.name, targetObject.name))
+            n = boneWeightCopy(tempObj, targetObject, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups)
+            print("Transferred weights of {} vertices".format(n))
 
     bpy.ops.object.delete()
 

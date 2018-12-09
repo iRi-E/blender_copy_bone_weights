@@ -30,11 +30,11 @@ bl_info = {
     "category": "3D View"}
 
 
-class BWCUi(bpy.types.Panel):
+class VIEW3D_PT_copy_bone_weights(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_category = "Tools"
-    bl_label = "Bone Weight Copy"
+    bl_label = "Copy Bone Weights"
     bl_context = "objectmode"
     bl_options = {"DEFAULT_CLOSED"}
 
@@ -47,12 +47,12 @@ class BWCUi(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        scn = context.scene
+        cbw = context.scene.copy_bone_weights
 
         col = layout.column(align=False)
-        col.prop(scn, 'BWCNamedBones')
-        col.prop(scn, 'BWCEmptyGroups')
-        col.operator("object.bwc", text="Copy Bone Weights")
+        col.prop(cbw, 'named_bones')
+        col.prop(cbw, 'empty_groups')
+        col.operator("object.copy_bone_weights", text="Copy Bone Weights")
 
 
 def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
@@ -164,17 +164,19 @@ def main(context):
     for targetObject in targetObjects:
         if (targetObject.type == 'MESH') & (targetObject != baseObj):
             print("Copy bone weights from '{}' to '{}'".format(baseObj.name, targetObject.name))
-            n = boneWeightCopy(tempObj, targetObject, context.scene.BWCNamedBones, context.scene.BWCEmptyGroups)
+            n = boneWeightCopy(tempObj, targetObject,
+                               context.scene.copy_bone_weights.named_bones,
+                               context.scene.copy_bone_weights.empty_groups)
             print("Transferred weights of {} vertices".format(n))
 
     bpy.ops.object.delete()
 
 
 # Copy Bone Weights Operator
-class BWCOperator(bpy.types.Operator):
+class OBJECT_OT_copy_bone_weights(bpy.types.Operator):
     '''Copy bone weights from active object to selected vertices in other selected objects'''
 
-    bl_idname = "object.bwc"
+    bl_idname = "object.copy_bone_weights"
     bl_label = "Copy Bone Weights Active Object to Selected Objects"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -183,25 +185,39 @@ class BWCOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-# registring
-def register():
-    bpy.utils.register_module(__name__)
-
-    bpy.types.Scene.BWCNamedBones = bpy.props.BoolProperty(
+# Properties
+class CopyBoneWeightsProps(bpy.types.PropertyGroup):
+    named_bones = bpy.props.BoolProperty(
         name="Only Named Bones",
         description="Copy only the bone related weight groups to Target (Skip all other weight groups)",
         default=False)
-    bpy.types.Scene.BWCEmptyGroups = bpy.props.BoolProperty(
+
+    empty_groups = bpy.props.BoolProperty(
         name="Copy Empty Groups",
         description="Create bone related weight groups in Target, even if they contain no vertices",
         default=False)
 
 
-def unregister():
-    del bpy.types.Scene.BWCNamedBones
-    del bpy.types.Scene.BWCEmptyGroups
+# registring
+classes = (
+    OBJECT_OT_copy_bone_weights,
+    CopyBoneWeightsProps,
+    VIEW3D_PT_copy_bone_weights,
+)
 
-    bpy.utils.unregister_module(__name__)
+
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+
+    bpy.types.Scene.copy_bone_weights = bpy.props.PointerProperty(type=CopyBoneWeightsProps)
+
+
+def unregister():
+    del bpy.types.Scene.copy_bone_weights
+
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":

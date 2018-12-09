@@ -156,7 +156,8 @@ def main(context):
     # apply mirrors, to process target objects not mirrored
     for modifier in tempObj.modifiers:
         if modifier.type == 'MIRROR':
-            bpy.ops.object.shape_key_remove(all=True)
+            if tempObj.data.shape_keys:
+                bpy.ops.object.shape_key_remove(all=True)
             bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modifier.name)
 
     for v in tempObj.data.vertices:

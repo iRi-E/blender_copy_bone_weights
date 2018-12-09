@@ -16,6 +16,9 @@
 #
 # ***** END GPL LICENCE BLOCK *****
 
+import bpy
+import mathutils
+
 bl_info = {
     "name": "Copy Bone Weights",
     "author": "Luke Hares, Gaia Clary, IRIE Shinsuke",
@@ -25,11 +28,6 @@ bl_info = {
     "description": "Copy Bone Weights from Active Object to Selected Objects",
     "tracker_url": "https://github.com/iRi-E/blender_copy_bone_weights/issues",
     "category": "3D View"}
-
-
-import bpy
-from bpy.props import *
-import mathutils
 
 
 class BWCUi(bpy.types.Panel):
@@ -189,11 +187,11 @@ class BWCOperator(bpy.types.Operator):
 def register():
     bpy.utils.register_module(__name__)
 
-    bpy.types.Scene.BWCNamedBones = BoolProperty(
+    bpy.types.Scene.BWCNamedBones = bpy.props.BoolProperty(
         name="Only Named Bones",
         description="Copy only the bone related weight groups to Target (Skip all other weight groups)",
         default=False)
-    bpy.types.Scene.BWCEmptyGroups = BoolProperty(
+    bpy.types.Scene.BWCEmptyGroups = bpy.props.BoolProperty(
         name="Copy Empty Groups",
         description="Create bone related weight groups in Target, even if they contain no vertices",
         default=False)

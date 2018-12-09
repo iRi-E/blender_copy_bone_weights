@@ -18,41 +18,20 @@
 
 import bpy
 import mathutils
+from contextlib import redirect_stdout
+import io
 
 bl_info = {
     "name": "Copy Bone Weights",
     "author": "Luke Hares, Gaia Clary, IRIE Shinsuke",
     "version": (0, 1),
-    "blender": (2, 78, 0),
+    "blender": (2, 80, 0),  # or (2, 79, 0)
     "location": "View3D > Tool Shelf > Copy Bone Weights Panel",
     "description": "Copy Bone Weights from Active Object to Selected Objects",
     "tracker_url": "https://github.com/iRi-E/blender_copy_bone_weights/issues",
     "category": "3D View"}
 
-
-class VIEW3D_PT_copy_bone_weights(bpy.types.Panel):
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS'
-    bl_category = "Tools"
-    bl_label = "Copy Bone Weights"
-    bl_context = "objectmode"
-    bl_options = {"DEFAULT_CLOSED"}
-
-    @classmethod
-    def poll(cls, context):
-        try:
-            return context.active_object.type == "MESH"
-        except AttributeError:
-            return False
-
-    def draw(self, context):
-        layout = self.layout
-        cbw = context.scene.copy_bone_weights
-
-        col = layout.column(align=False)
-        col.prop(cbw, 'named_bones')
-        col.prop(cbw, 'empty_groups')
-        col.operator("object.copy_bone_weights", text="Copy Bone Weights")
+blender28 = bpy.app.version[0] == 2 and bpy.app.version[1] >= 80 or bpy.app.version[0] >= 3
 
 
 def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
@@ -73,7 +52,8 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
                         targetObject.vertex_groups.new(bone.name)
 
     # get active object vertices and transform to world space
-    WSTargetVertsCo = [targetObject.matrix_world * v.co for v in targetObject.data.vertices]
+    WSTargetVertsCo = [targetObject.matrix_world @ v.co if blender28 else targetObject.matrix_world * v.co
+                       for v in targetObject.data.vertices]
 
     kd = None
     ncopied = 0
@@ -123,7 +103,7 @@ def boneWeightCopy(tempObj, targetObject, onlyNamedBones, keepEmptyGroups):
 
                     if weight:
                         if groupName not in targetObject.vertex_groups:
-                            targetObject.vertex_groups.new(groupName)
+                            targetObject.vertex_groups.new(name=groupName)
 
                         targetObject.vertex_groups[groupName].add([targetVert.index], weight, 'REPLACE')
                         copied = True
@@ -146,7 +126,10 @@ def main(context):
     baseObj = context.active_object
 
     bpy.ops.object.select_all(action='DESELECT')
-    baseObj.select = True
+    if blender28:
+        baseObj.select_set(True)
+    else:
+        baseObj.select = True
 
     bpy.ops.object.duplicate()
     tempObj = context.active_object
@@ -159,7 +142,7 @@ def main(context):
             bpy.ops.object.modifier_apply(apply_as='DATA', modifier=modifier.name)
 
     for v in tempObj.data.vertices:
-        v.co = baseObj.matrix_world * v.co
+        v.co = baseObj.matrix_world @ v.co if blender28 else baseObj.matrix_world * v.co
 
     for targetObject in targetObjects:
         if (targetObject.type == 'MESH') & (targetObject != baseObj):
@@ -169,7 +152,8 @@ def main(context):
                                context.scene.copy_bone_weights.empty_groups)
             print("Transferred weights of {} vertices".format(n))
 
-    bpy.ops.object.delete()
+    with redirect_stdout(io.StringIO()):  # quiet "Info: Deleted 1 object(s)"
+        bpy.ops.object.delete()
 
 
 # Copy Bone Weights Operator
@@ -185,6 +169,26 @@ class OBJECT_OT_copy_bone_weights(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# User interface
+class VIEW3D_MT_copy_bone_weights(bpy.types.Menu):
+    bl_label = "Copy Bone Weights"
+
+    def draw(self, context):
+        layout = self.layout
+        cbw = context.scene.copy_bone_weights
+
+        col = layout.column()
+        col.operator("object.copy_bone_weights", text="Copy Bone Weights")
+        col.prop(cbw, 'named_bones')
+        col.prop(cbw, 'empty_groups')
+
+
+def copy_bone_weights_menu(self, context):
+    layout = self.layout
+    layout.separator()
+    layout.menu("VIEW3D_MT_copy_bone_weights", icon="PLUGIN")
+
+
 # Properties
 class CopyBoneWeightsProps(bpy.types.PropertyGroup):
     named_bones = bpy.props.BoolProperty(
@@ -198,17 +202,19 @@ class CopyBoneWeightsProps(bpy.types.PropertyGroup):
         default=False)
 
 
-# registring
+# Register
 classes = (
     OBJECT_OT_copy_bone_weights,
     CopyBoneWeightsProps,
-    VIEW3D_PT_copy_bone_weights,
+    VIEW3D_MT_copy_bone_weights,
 )
 
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    bpy.types.VIEW3D_MT_object.append(copy_bone_weights_menu)
+    bpy.types.VIEW3D_MT_paint_weight.append(copy_bone_weights_menu)
 
     bpy.types.Scene.copy_bone_weights = bpy.props.PointerProperty(type=CopyBoneWeightsProps)
 
@@ -218,6 +224,8 @@ def unregister():
 
     for cls in classes:
         bpy.utils.unregister_class(cls)
+    bpy.types.VIEW3D_MT_object.remove(copy_bone_weights_menu)
+    bpy.types.VIEW3D_MT_paint_weight.remove(copy_bone_weights_menu)
 
 
 if __name__ == "__main__":
